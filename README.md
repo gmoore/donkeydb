@@ -27,7 +27,7 @@ Read some data
 
 #### Features
 
-* Slow (Scans the entire file for your key)
+* Slow
 * Unstable 
 * Not distributed
 * Not concurrent
