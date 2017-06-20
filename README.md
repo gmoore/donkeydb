@@ -25,6 +25,10 @@ Read some data
 
 `./donkeydb insert (key)`
 
+Delete some data
+
+`./donkeydb delete (key)`
+
 #### Features
 
 * Slow

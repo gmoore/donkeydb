@@ -21,7 +21,7 @@ func check(e error) {
 const tombstone = "\x00"
 
 func insert(key string, value string) {
-  f, err := os.OpenFile("./dat.donkey", os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
+  f, err := os.OpenFile("./donkey.dat", os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 
   n3, err := f.WriteString(key + "," + value + "\n")
   check(err)
@@ -42,7 +42,7 @@ func tokenizeLine(line string) Line {
 func fileScan(key string) string {
   fmt.Printf("Scanning the whole file because this isn't in our index for some reason")
   var val string;
-  f, err := os.OpenFile("./dat.donkey", os.O_RDONLY, 0644)
+  f, err := os.OpenFile("./donkey.dat", os.O_RDONLY, 0644)
   check(err)
   scanner := bufio.NewScanner(f)
   for scanner.Scan() {
@@ -64,7 +64,7 @@ func fileScan(key string) string {
 
 func filePosition(pos int) string {
   fmt.Printf("Using index at line position %v\n", pos)
-  f, err := os.OpenFile("./dat.donkey", os.O_RDONLY, 0644)
+  f, err := os.OpenFile("./donkey.dat", os.O_RDONLY, 0644)
   check(err)
   scanner := bufio.NewScanner(f)
   x := 0
@@ -105,7 +105,7 @@ func delete(key string, donkeyIndex map[string]int) {
 func loadDonkeyIndex() map[string]int {
   donkeyMap := make(map[string]int)
 
-  f, err := os.OpenFile("./dat.donkey", os.O_RDONLY, 0644)
+  f, err := os.OpenFile("./donkey.dat", os.O_RDONLY|os.O_CREATE, 0644)
   check(err)
   scanner := bufio.NewScanner(f)
   x := 0
