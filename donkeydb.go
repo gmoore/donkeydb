@@ -18,6 +18,8 @@ func check(e error) {
     }
 }
 
+const tombstone = "\x00"
+
 func insert(key string, value string) {
   f, err := os.OpenFile("./dat.donkey", os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 
@@ -92,6 +94,14 @@ func sselect(key string, donkeyIndex map[string]int) string {
   }
 }
 
+func delete(key string, donkeyIndex map[string]int) {
+  mapVal := donkeyIndex[key]
+
+  if (mapVal != 0) {
+    insert(key, tombstone)
+  }
+}
+
 func loadDonkeyIndex() map[string]int {
   donkeyMap := make(map[string]int)
 
@@ -133,6 +143,9 @@ func main() {
   } else if (command == "select") {
     val := sselect(key, donkeyIndex)
     fmt.Println(val)
+  } else if (command == "delete") {
+    delete(key, donkeyIndex)
+    fmt.Println("Deleted " + key)
   } else {
     fmt.Println("I don't know how to " + command)
   }
