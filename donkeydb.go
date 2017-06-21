@@ -40,7 +40,7 @@ func tokenizeLine(line string) Line {
  * If our index is up to date, we should never need to rescan the file
  */
 func fileScan(key string) string {
-  fmt.Printf("Scanning the whole file because this isn't in our index for some reason")
+  fmt.Printf("Scanning the whole file because this isn't in our index for some reason\n")
   var val string;
   f, err := os.OpenFile("./donkey.dat", os.O_RDONLY, 0644)
   check(err)
@@ -67,7 +67,7 @@ func filePosition(pos int) string {
   f, err := os.OpenFile("./donkey.dat", os.O_RDONLY, 0644)
   check(err)
   scanner := bufio.NewScanner(f)
-  x := 0
+  x := 1
   for scanner.Scan() {
     line  := scanner.Text()
     if (x == pos) {
@@ -108,7 +108,7 @@ func loadDonkeyIndex() map[string]int {
   f, err := os.OpenFile("./donkey.dat", os.O_RDONLY|os.O_CREATE, 0644)
   check(err)
   scanner := bufio.NewScanner(f)
-  x := 0
+  x := 1 //Go hashmap zero value is 0, so we can't 0-index this thing
   for scanner.Scan() {
     line  := scanner.Text()
     tokenizedLine := tokenizeLine(line)
@@ -124,28 +124,34 @@ func loadDonkeyIndex() map[string]int {
   return donkeyMap
 }
 
-func main() {
-  numArgs := len(os.Args)
-
-  donkeyIndex := loadDonkeyIndex()
-
-  if (numArgs < 3) {
-    fmt.Println("Usage: donkeydb [command] [key] [value]")
-    os.Exit(1)
+func all(donkeyIndex map[string]int) {
+  for k, _ := range donkeyIndex { 
+    val := sselect(k, donkeyIndex)
+    fmt.Printf(k + " " + val + "\n")
   }
+}
 
+func main() {
+  donkeyIndex := loadDonkeyIndex()
   command := os.Args[1]
-  key     := os.Args[2]
 
   if (command == "insert") {
+    key     := os.Args[2]
     value   := os.Args[3]
     insert(key, value)
   } else if (command == "select") {
+    key     := os.Args[2]
     val := sselect(key, donkeyIndex)
     fmt.Println(val)
   } else if (command == "delete") {
+    key     := os.Args[2]
     delete(key, donkeyIndex)
     fmt.Println("Deleted " + key)
+  } else if (command == "all") {
+    all(donkeyIndex)
+  } else if (command == "help") {
+    fmt.Println("Usage: donkeydb [command] [key] [value]")
+    os.Exit(1)
   } else {
     fmt.Println("I don't know how to " + command)
   }
