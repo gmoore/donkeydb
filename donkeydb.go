@@ -5,12 +5,16 @@ import (
     "fmt"
     "os"
     "strings"
+    "net"
+    "time"
 )
 
 type Line struct {
     key string
     value string
 }
+
+type DonkeyIndex map[string]int
 
 func check(e error) {
     if e != nil {
@@ -83,7 +87,7 @@ func filePosition(pos int) string {
   return "PANIC"
 }
 
-func sselect(key string, donkeyIndex map[string]int) string {
+func sselect(key string, donkeyIndex DonkeyIndex) string {
 
   mapVal := donkeyIndex[key]
 
@@ -94,7 +98,7 @@ func sselect(key string, donkeyIndex map[string]int) string {
   }
 }
 
-func delete(key string, donkeyIndex map[string]int) {
+func delete(key string, donkeyIndex DonkeyIndex) {
   mapVal := donkeyIndex[key]
 
   if (mapVal != 0) {
@@ -102,8 +106,8 @@ func delete(key string, donkeyIndex map[string]int) {
   }
 }
 
-func loadDonkeyIndex() map[string]int {
-  donkeyMap := make(map[string]int)
+func loadDonkeyIndex() DonkeyIndex {
+  donkeyMap := make(DonkeyIndex)
 
   f, err := os.OpenFile("./donkey.dat", os.O_RDONLY|os.O_CREATE, 0644)
   check(err)
@@ -124,45 +128,69 @@ func loadDonkeyIndex() map[string]int {
   return donkeyMap
 }
 
-func all(donkeyIndex map[string]int) {
-  for k, _ := range donkeyIndex { 
-    val := sselect(k, donkeyIndex)
-    fmt.Printf(k + " " + val + "\n")
+func handleClient(conn net.Conn, donkeyIndex DonkeyIndex) DonkeyIndex {
+  fmt.Println("Accepted connection")
+  conn.SetReadDeadline(time.Now().Add(2 * time.Minute))
+  request := make([]byte, 128)
+  defer conn.Close()
+  for {
+    read_len, err := conn.Read(request)
+
+    if err != nil {
+      fmt.Println(err)
+      break
+    }
+
+    if read_len == 0 {
+      break // connection already closed by client
+    } 
+
+    payload := string(request[:read_len])
+    fmt.Println("Received payload [" + payload + "]")
+
+    tokens  := strings.Split(payload, " ")
+    command := tokens[0]
+
+    if (command == "insert") {
+      key     := tokens[1]
+      value   := tokens[2]
+      insert(key, value)
+      donkeyIndex = loadDonkeyIndex()
+      conn.Write([]byte("Inserted"))
+    } else if (command == "select") {
+      key     := tokens[1]
+      val     := sselect(key, donkeyIndex)
+      conn.Write([]byte(val))
+    } else if (command == "delete") {
+      key     := tokens[1]
+      delete(key, donkeyIndex)
+      donkeyIndex = loadDonkeyIndex()
+      conn.Write([]byte("Deleted " + key))
+    } else {
+      conn.Write([]byte("I don't know how to " + command + ". Try 'donkeydb help'"))
+    }   
+
+    break
   }
+
+  return donkeyIndex
 }
 
-func printHelp() {
-  fmt.Println("Usage: donkeydb [command] (key) (value)")
-  fmt.Println("Commands: insert select delete all help")
-  os.Exit(1)
-}
 
 func main() {
-  numArgs := len(os.Args)
-  if (numArgs < 2) {
-    printHelp()
-  }
+  donkeyIndex   := loadDonkeyIndex()
 
-  donkeyIndex := loadDonkeyIndex()
-  command := os.Args[1]
-
-  if (command == "insert") {
-    key     := os.Args[2]
-    value   := os.Args[3]
-    insert(key, value)
-  } else if (command == "select") {
-    key     := os.Args[2]
-    val := sselect(key, donkeyIndex)
-    fmt.Println(val)
-  } else if (command == "delete") {
-    key     := os.Args[2]
-    delete(key, donkeyIndex)
-    fmt.Println("Deleted " + key)
-  } else if (command == "all") {
-    all(donkeyIndex)
-  } else if (command == "help") {
-    printHelp()
-  } else {
-    fmt.Println("I don't know how to " + command)
+  service := ":27182"             //e
+  tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
+  check(err)
+  listener, err := net.ListenTCP("tcp", tcpAddr)
+  check(err)
+  fmt.Println("Listening on " + service)
+  for {
+    conn, err := listener.Accept()
+    if err != nil {
+        continue
+    }
+    donkeyIndex = handleClient(conn, donkeyIndex)
   }
 }
