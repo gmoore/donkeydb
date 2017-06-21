@@ -23,7 +23,7 @@ Insert some data
 
 Read some data
 
-`./bin/donkeyclient insert (key)`
+`./bin/donkeyclient select (key)`
 
 Delete some data
 
