@@ -131,7 +131,18 @@ func all(donkeyIndex map[string]int) {
   }
 }
 
+func printHelp() {
+  fmt.Println("Usage: donkeydb [command] (key) (value)")
+  fmt.Println("Commands: insert select delete all help")
+  os.Exit(1)
+}
+
 func main() {
+  numArgs := len(os.Args)
+  if (numArgs < 2) {
+    printHelp()
+  }
+
   donkeyIndex := loadDonkeyIndex()
   command := os.Args[1]
 
@@ -150,8 +161,7 @@ func main() {
   } else if (command == "all") {
     all(donkeyIndex)
   } else if (command == "help") {
-    fmt.Println("Usage: donkeydb [command] [key] [value]")
-    os.Exit(1)
+    printHelp()
   } else {
     fmt.Println("I don't know how to " + command)
   }
