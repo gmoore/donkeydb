@@ -29,11 +29,14 @@ Delete some data
 
 `./donkeydb delete (key)`
 
+Look at some data
+
+`./donkeydb all`
+
 #### Features
 
 * Slow
 * Unstable 
 * Not distributed
 * Not concurrent
-* Not durable (If you delete the data file, your data is gone forever)
-* Keys can't be deleted
+* Not durable
