@@ -7,6 +7,7 @@ import (
     "strings"
     "net"
     "time"
+    "io"
 )
 
 type Line struct {
@@ -14,7 +15,7 @@ type Line struct {
     value string
 }
 
-type DonkeyIndex map[string]int
+type DonkeyIndex map[string]int64
 
 func check(e error) {
     if e != nil {
@@ -23,11 +24,22 @@ func check(e error) {
 }
 
 const tombstone = "\x00"
+const keyBreak = ","
+const recordBreak = " "
 
 func insert(key string, value string) {
+  stat,err := os.Stat("./donkey.dat")
+
+  //TODO: Move this to initialization
+  if (stat == nil) {
+    fmt.Println("No data file found. We'll start a new one")
+  } else {
+    fmt.Printf("Length is %v\n", stat.Size())
+  }
+
   f, err := os.OpenFile("./donkey.dat", os.O_RDWR|os.O_APPEND|os.O_CREATE, 0644)
 
-  n3, err := f.WriteString(key + "," + value + "\n")
+  n3, err := f.WriteString(key + keyBreak + value + recordBreak)
   check(err)
   fmt.Printf("wrote %d bytes\n", n3)
   f.Close()
@@ -66,25 +78,42 @@ func fileScan(key string) string {
   return val
 }
 
-func filePosition(pos int) string {
-  fmt.Printf("Using index at line position %v\n", pos)
+func filePosition(pos int64) string {
+  fmt.Printf("Using index at byte position %v\n", pos)
   f, err := os.OpenFile("./donkey.dat", os.O_RDONLY, 0644)
   check(err)
-  scanner := bufio.NewScanner(f)
-  x := 1
-  for scanner.Scan() {
-    line  := scanner.Text()
-    if (x == pos) {
-      return tokenizeLine(line).value
-    }
-    x++
-  }
-  if err := scanner.Err(); err != nil {
-    fmt.Fprintln(os.Stderr, "reading standard input:", err)
-  }
 
-  f.Close()
-  return "PANIC"
+  currentChar   := make([]byte, 1)
+  currentValue  := make([]byte, 1)
+  onValue       := false
+
+  _,err = f.ReadAt(currentChar, pos)
+
+  //Read until we hit keyBreak
+  //Then read until we hit recordBreak
+  for {
+    if (err != nil && err == io.EOF) {
+      break
+    }
+
+    if (string(currentChar) == recordBreak) {
+      break
+    }
+
+    if (string(currentChar) == keyBreak) {
+      onValue = true
+      pos = pos + 1
+      _,err = f.ReadAt(currentChar, pos)
+    }
+
+    if(onValue) {
+      currentValue = append(currentValue, currentChar[0])
+    }
+
+    pos = pos + 1
+    _,err = f.ReadAt(currentChar, pos)
+  }
+  return string(currentValue)
 }
 
 func sselect(key string, donkeyIndex DonkeyIndex) string {
@@ -112,15 +141,24 @@ func loadDonkeyIndex() DonkeyIndex {
   f, err := os.OpenFile("./donkey.dat", os.O_RDONLY|os.O_CREATE, 0644)
   check(err)
   scanner := bufio.NewScanner(f)
-  x := 1 //Go hashmap zero value is 0, so we can't 0-index this thing
+
+  scanner.Split(bufio.ScanWords)
+
+  var x int64
+  x = 1 //Go hashmap zero value is 0, so we can't 0-index this thing
   for scanner.Scan() {
     line  := scanner.Text()
     tokenizedLine := tokenizeLine(line)
     donkeyMap[tokenizedLine.key] = x
-    x++
+    byteLen := len(scanner.Bytes())
+    x = x + int64(byteLen) + int64(len(recordBreak))
   }
   if err := scanner.Err(); err != nil {
     fmt.Fprintln(os.Stderr, "reading standard input:", err)
+  }
+
+  for k,v := range donkeyMap {
+    fmt.Printf("%v %v\n", k, v)
   }
 
   f.Close()
